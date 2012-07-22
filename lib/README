@@ -1,0 +1,8 @@
+libの中身のファイルは
+Linux,OSXなら
+~/Document/Arduino/libraries/
+
+Windowsなら
+My Documents\Arduino\libraries\
+
+に放り込む。
