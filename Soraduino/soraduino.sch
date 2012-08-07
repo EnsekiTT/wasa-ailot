@@ -12958,9 +12958,11 @@ In this library the device names are the same as the pin names of the symbols, t
 <wire x1="172.72" y1="109.22" x2="172.72" y2="0" width="0.1524" layer="91"/>
 <wire x1="172.72" y1="0" x2="162.56" y2="0" width="0.1524" layer="91"/>
 <junction x="162.56" y="0"/>
+<junction x="172.72" y="0"/>
 <pinref part="IC4" gate="G$1" pin="DCPROG"/>
 <wire x1="137.16" y1="86.36" x2="162.56" y2="86.36" width="0.1524" layer="91"/>
 <junction x="162.56" y="86.36"/>
+<wire x1="172.72" y1="0" x2="254" y2="0" width="0.1524" layer="91"/>
 <pinref part="JAIRO-ANA" gate="G$1" pin="2"/>
 </segment>
 </net>
@@ -13260,10 +13262,6 @@ In this library the device names are the same as the pin names of the symbols, t
 </nets>
 </sheet>
 </sheets>
-<errors>
-<approved hash="202,1,279.4,58.42,XB1,!RESET,,,,"/>
-<approved hash="202,1,279.4,10.16,XB1,VREF,,,,"/>
-</errors>
 </schematic>
 </drawing>
 </eagle>
