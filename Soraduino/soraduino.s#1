@@ -12602,12 +12602,10 @@ In this library the device names are the same as the pin names of the symbols, t
 <part name="C8" library="resistor" deviceset="C-EU" device="C0805K" value="0.1u"/>
 <part name="R1" library="rcl" deviceset="R-US_" device="R0603" value="1k"/>
 <part name="R2" library="rcl" deviceset="R-US_" device="R0603" value="1k"/>
-<part name="DIGITAL" library="pinhead" deviceset="PINHD-1X6" device=""/>
 <part name="SV1" library="con-lstb" deviceset="MA20-2" device=""/>
 <part name="SV2" library="con-lstb" deviceset="MA20-1" device=""/>
 <part name="JAIRO-ANA" library="con-lstb" deviceset="MA04-2" device=""/>
 <part name="I2C-ACC" library="con-lstb" deviceset="MA04-2" device=""/>
-<part name="GPS-SUP" library="con-lstb" deviceset="MA04-2" device=""/>
 <part name="SUPPLY1" library="supply2" deviceset="GND" device=""/>
 <part name="P+1" library="supply1" deviceset="VCC" device=""/>
 </parts>
@@ -12633,12 +12631,10 @@ In this library the device names are the same as the pin names of the symbols, t
 <instance part="C8" gate="G$1" x="-2.54" y="48.26" rot="R180"/>
 <instance part="R1" gate="G$1" x="35.56" y="33.02" rot="R90"/>
 <instance part="R2" gate="G$1" x="142.24" y="99.06" rot="R90"/>
-<instance part="DIGITAL" gate="A" x="243.84" y="17.78"/>
 <instance part="SV1" gate="G$1" x="88.9" y="104.14"/>
 <instance part="SV2" gate="1" x="60.96" y="101.6"/>
 <instance part="JAIRO-ANA" gate="G$1" x="180.34" y="114.3"/>
 <instance part="I2C-ACC" gate="G$1" x="218.44" y="114.3"/>
-<instance part="GPS-SUP" gate="G$1" x="254" y="114.3"/>
 <instance part="SUPPLY1" gate="GND" x="10.16" y="48.26"/>
 <instance part="P+1" gate="VCC" x="81.28" y="137.16"/>
 </instances>
@@ -12667,17 +12663,13 @@ In this library the device names are the same as the pin names of the symbols, t
 <pinref part="XB1" gate="G$1" pin="VCC"/>
 <pinref part="C4" gate="G$1" pin="2"/>
 <junction x="279.4" y="60.96"/>
-<wire x1="208.28" y1="78.74" x2="261.62" y2="78.74" width="0.1524" layer="91"/>
-<wire x1="261.62" y1="78.74" x2="279.4" y2="78.74" width="0.1524" layer="91"/>
+<wire x1="208.28" y1="78.74" x2="279.4" y2="78.74" width="0.1524" layer="91"/>
 <wire x1="279.4" y1="78.74" x2="279.4" y2="71.12" width="0.1524" layer="91"/>
 <junction x="279.4" y="71.12"/>
 <wire x1="279.4" y1="60.96" x2="276.86" y2="60.96" width="0.1524" layer="91"/>
 <pinref part="I2C-ACC" gate="G$1" pin="2"/>
 <wire x1="208.28" y1="78.74" x2="208.28" y2="109.22" width="0.1524" layer="91"/>
 <wire x1="208.28" y1="109.22" x2="210.82" y2="109.22" width="0.1524" layer="91"/>
-<pinref part="GPS-SUP" gate="G$1" pin="1"/>
-<wire x1="261.62" y1="109.22" x2="261.62" y2="78.74" width="0.1524" layer="91"/>
-<junction x="261.62" y="78.74"/>
 <pinref part="I2C-ACC" gate="G$1" pin="1"/>
 <wire x1="210.82" y1="109.22" x2="226.06" y2="109.22" width="0.1524" layer="91"/>
 <junction x="210.82" y="109.22"/>
@@ -12799,75 +12791,12 @@ In this library the device names are the same as the pin names of the symbols, t
 <pinref part="JAIRO-ANA" gate="G$1" pin="8"/>
 </segment>
 </net>
-<net name="N$36" class="0">
-<segment>
-<pinref part="IC1" gate="1" pin="DIGITAL_2"/>
-<wire x1="134.62" y1="38.1" x2="238.76" y2="38.1" width="0.1524" layer="91"/>
-<wire x1="238.76" y1="38.1" x2="238.76" y2="116.84" width="0.1524" layer="91"/>
-<pinref part="GPS-SUP" gate="G$1" pin="8"/>
-<wire x1="238.76" y1="116.84" x2="246.38" y2="116.84" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$37" class="0">
-<segment>
-<pinref part="IC1" gate="1" pin="DIGITAL_4"/>
-<wire x1="134.62" y1="33.02" x2="241.3" y2="33.02" width="0.1524" layer="91"/>
-<wire x1="241.3" y1="33.02" x2="241.3" y2="114.3" width="0.1524" layer="91"/>
-<pinref part="GPS-SUP" gate="G$1" pin="6"/>
-<wire x1="241.3" y1="114.3" x2="246.38" y2="114.3" width="0.1524" layer="91"/>
-</segment>
-</net>
 <net name="N$38" class="0">
 <segment>
 <pinref part="IC4" gate="G$1" pin="IREF"/>
 <pinref part="R2" gate="G$1" pin="1"/>
 <wire x1="137.16" y1="88.9" x2="142.24" y2="88.9" width="0.1524" layer="91"/>
 <wire x1="142.24" y1="88.9" x2="142.24" y2="93.98" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$39" class="0">
-<segment>
-<pinref part="IC1" gate="1" pin="DIGITAL_5(PWM)"/>
-<wire x1="134.62" y1="30.48" x2="208.28" y2="30.48" width="0.1524" layer="91"/>
-<pinref part="DIGITAL" gate="A" pin="1"/>
-<wire x1="208.28" y1="30.48" x2="208.28" y2="25.4" width="0.1524" layer="91"/>
-<wire x1="208.28" y1="25.4" x2="241.3" y2="25.4" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$40" class="0">
-<segment>
-<pinref part="IC1" gate="1" pin="DIGITAL_6(PWM)"/>
-<wire x1="134.62" y1="27.94" x2="205.74" y2="27.94" width="0.1524" layer="91"/>
-<pinref part="DIGITAL" gate="A" pin="2"/>
-<wire x1="205.74" y1="27.94" x2="205.74" y2="22.86" width="0.1524" layer="91"/>
-<wire x1="205.74" y1="22.86" x2="241.3" y2="22.86" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$41" class="0">
-<segment>
-<pinref part="IC1" gate="1" pin="DIGITAL_7"/>
-<wire x1="134.62" y1="25.4" x2="203.2" y2="25.4" width="0.1524" layer="91"/>
-<pinref part="DIGITAL" gate="A" pin="3"/>
-<wire x1="203.2" y1="25.4" x2="203.2" y2="20.32" width="0.1524" layer="91"/>
-<wire x1="203.2" y1="20.32" x2="241.3" y2="20.32" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$42" class="0">
-<segment>
-<pinref part="IC1" gate="1" pin="DIGITAL_8"/>
-<wire x1="134.62" y1="20.32" x2="200.66" y2="20.32" width="0.1524" layer="91"/>
-<pinref part="DIGITAL" gate="A" pin="4"/>
-<wire x1="200.66" y1="20.32" x2="200.66" y2="17.78" width="0.1524" layer="91"/>
-<wire x1="200.66" y1="17.78" x2="241.3" y2="17.78" width="0.1524" layer="91"/>
-</segment>
-</net>
-<net name="N$47" class="0">
-<segment>
-<pinref part="IC1" gate="1" pin="DIGITAL_12"/>
-<wire x1="134.62" y1="10.16" x2="203.2" y2="10.16" width="0.1524" layer="91"/>
-<pinref part="DIGITAL" gate="A" pin="5"/>
-<wire x1="203.2" y1="10.16" x2="203.2" y2="15.24" width="0.1524" layer="91"/>
-<wire x1="203.2" y1="15.24" x2="241.3" y2="15.24" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$9" class="0">
@@ -12991,10 +12920,6 @@ In this library the device names are the same as the pin names of the symbols, t
 </net>
 <net name="N$7" class="0">
 <segment>
-<pinref part="GPS-SUP" gate="G$1" pin="7"/>
-<wire x1="261.62" y1="116.84" x2="266.7" y2="116.84" width="0.1524" layer="91"/>
-<wire x1="266.7" y1="116.84" x2="266.7" y2="101.6" width="0.1524" layer="91"/>
-<wire x1="266.7" y1="101.6" x2="254" y2="101.6" width="0.1524" layer="91"/>
 <pinref part="IC3" gate="A1" pin="VO"/>
 <pinref part="C6" gate="G$1" pin="2"/>
 <wire x1="40.64" y1="48.26" x2="40.64" y2="58.42" width="0.1524" layer="91"/>
@@ -13039,11 +12964,6 @@ In this library the device names are the same as the pin names of the symbols, t
 <junction x="162.56" y="86.36"/>
 <wire x1="172.72" y1="0" x2="254" y2="0" width="0.1524" layer="91"/>
 <pinref part="JAIRO-ANA" gate="G$1" pin="2"/>
-<wire x1="254" y1="101.6" x2="254" y2="0" width="0.1524" layer="91"/>
-<pinref part="GPS-SUP" gate="G$1" pin="2"/>
-<wire x1="246.38" y1="109.22" x2="246.38" y2="101.6" width="0.1524" layer="91"/>
-<wire x1="246.38" y1="101.6" x2="254" y2="101.6" width="0.1524" layer="91"/>
-<junction x="254" y="101.6"/>
 </segment>
 </net>
 <net name="N$25" class="0">
@@ -13113,9 +13033,6 @@ In this library the device names are the same as the pin names of the symbols, t
 </net>
 <net name="GND" class="0">
 <segment>
-<pinref part="GPS-SUP" gate="G$1" pin="4"/>
-<wire x1="246.38" y1="111.76" x2="243.84" y2="111.76" width="0.1524" layer="91"/>
-<wire x1="243.84" y1="111.76" x2="243.84" y2="63.5" width="0.1524" layer="91"/>
 <wire x1="205.74" y1="111.76" x2="210.82" y2="111.76" width="0.1524" layer="91"/>
 <wire x1="205.74" y1="111.76" x2="205.74" y2="63.5" width="0.1524" layer="91"/>
 <wire x1="205.74" y1="63.5" x2="243.84" y2="63.5" width="0.1524" layer="91"/>
@@ -13245,20 +13162,8 @@ In this library the device names are the same as the pin names of the symbols, t
 <pinref part="JAIRO-ANA" gate="G$1" pin="4"/>
 <wire x1="170.18" y1="111.76" x2="172.72" y2="111.76" width="0.1524" layer="91"/>
 <wire x1="243.84" y1="63.5" x2="243.84" y2="48.26" width="0.1524" layer="91"/>
-<wire x1="243.84" y1="48.26" x2="256.54" y2="48.26" width="0.1524" layer="91"/>
-<junction x="243.84" y="63.5"/>
 <junction x="269.24" y="48.26"/>
-<wire x1="256.54" y1="48.26" x2="269.24" y2="48.26" width="0.1524" layer="91"/>
-<wire x1="256.54" y1="48.26" x2="256.54" y2="104.14" width="0.1524" layer="91"/>
-<wire x1="256.54" y1="104.14" x2="264.16" y2="104.14" width="0.1524" layer="91"/>
-<pinref part="GPS-SUP" gate="G$1" pin="3"/>
-<wire x1="264.16" y1="104.14" x2="264.16" y2="111.76" width="0.1524" layer="91"/>
-<wire x1="264.16" y1="111.76" x2="261.62" y2="111.76" width="0.1524" layer="91"/>
-<junction x="256.54" y="48.26"/>
-<pinref part="GPS-SUP" gate="G$1" pin="5"/>
-<wire x1="264.16" y1="111.76" x2="264.16" y2="114.3" width="0.1524" layer="91"/>
-<wire x1="264.16" y1="114.3" x2="261.62" y2="114.3" width="0.1524" layer="91"/>
-<junction x="264.16" y="111.76"/>
+<wire x1="243.84" y1="48.26" x2="269.24" y2="48.26" width="0.1524" layer="91"/>
 <pinref part="I2C-ACC" gate="G$1" pin="3"/>
 <wire x1="210.82" y1="111.76" x2="226.06" y2="111.76" width="0.1524" layer="91"/>
 <pinref part="I2C-ACC" gate="G$1" pin="4"/>
