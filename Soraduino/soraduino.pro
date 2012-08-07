@@ -2,24 +2,24 @@ EAGLE AutoRouter Statistics:
 
 Job           : /Users/ensekitt/Development/wasa-ailot/Soraduino/soraduino.brd
 
-Start at      : 04:24:45 (12/08/05)
-End at        : 04:24:45 (12/08/05)
-Elapsed time  : 00:00:00
+Start at      : 19:54:25 (12/08/07)
+End at        : 19:55:27 (12/08/07)
+Elapsed time  : 00:01:02
 
-Signals       :    47   RoutingGrid: 50 mil  Layers: 2
-Connections   :   132   predefined:  101 ( 12 Vias )
+Signals       :    50   RoutingGrid: 6 mil  Layers: 2
+Connections   :   142   predefined:  0 ( 0 Vias )
 
-Router memory :   10976
+Router memory :   899912
 
 Passname          :     Route Optimize1 Optimize2 Optimize3 Optimize4
 
-Time per pass     :  00:00:00  00:00:00  00:00:00  00:00:00  00:00:00
-Number of Ripups  :         0         0         0         0         0
-max. Level        :         1         0         0         0         0
-max. Total        :         0         0         0         0         0
+Time per pass     :  00:00:44  00:00:05  00:00:04  00:00:04  00:00:05
+Number of Ripups  :       136         0         0         0         0
+max. Level        :         3         0         0         0         0
+max. Total        :        47         0         0         0         0
 
-Routed            :         0         0         0         0         0
-Vias              :         0         0         0         0         0
-Resolution        :    76.5 %    76.5 %    76.5 %    76.5 %    76.5 %
+Routed            :       142       142       142       142       142
+Vias              :       179       147       116       109       105
+Resolution        :   100.0 %   100.0 %   100.0 %   100.0 %   100.0 %
 
-Final             : 76.5% finished
+Final             : 100.0% finished
