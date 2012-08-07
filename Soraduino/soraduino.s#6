@@ -12398,11 +12398,12 @@ Operational amplifiers,  comparators, voltage regulators, ADCs, DACs, etc.&lt;p&
 <pinref part="JP5" gate="A" pin="2"/>
 <junction x="27.94" y="88.9"/>
 <wire x1="27.94" y1="88.9" x2="27.94" y2="91.44" width="0.1524" layer="91"/>
+<junction x="27.94" y="91.44"/>
 <junction x="38.1" y="63.5"/>
 <wire x1="27.94" y1="91.44" x2="27.94" y2="96.52" width="0.1524" layer="91"/>
 <wire x1="27.94" y1="96.52" x2="25.4" y2="96.52" width="0.1524" layer="91"/>
-<pinref part="JP11" gate="A" pin="2"/>
-<wire x1="25.4" y1="96.52" x2="25.4" y2="132.08" width="0.1524" layer="91"/>
+<pinref part="JP10" gate="A" pin="2"/>
+<wire x1="25.4" y1="96.52" x2="25.4" y2="101.6" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$9" class="0">
