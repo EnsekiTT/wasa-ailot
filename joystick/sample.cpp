@@ -45,7 +45,6 @@ int main(void)
 			printf("\n");
 		}
 
-		sleep(1);
 	}
 
 	return 0;

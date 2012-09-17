@@ -2,9 +2,9 @@
 #define YSMACOSXJOYSTICK_IS_INCLUDED
 /* { */
 
-const int YsJoyReaderMaxNumAxis=12;
+const int YsJoyReaderMaxNumAxis=8;
 const int YsJoyReaderMaxNumButton=32;
-const int YsJoyReaderMaxNumHatSwitch=4;
+const int YsJoyReaderMaxNumHatSwitch=8;
 
 #include <stdio.h>
 #include <unistd.h>
