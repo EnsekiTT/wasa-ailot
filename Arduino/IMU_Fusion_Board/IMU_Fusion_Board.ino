@@ -7,7 +7,7 @@
 */
 
 #define GYRO 0x68         // gyro I2C address
-#define REG_GYRO_X 0x1D   // IMU-3000 Register address for GYRO_XOUT_H
+#define GYRO_XOUT_H 0x1D   // IMU-3000 Register address for GYRO_XOUT_H
 #define REG_TEMP 0x1B     // IMU-3000 Register address for 
 #define ACCEL 0x53        // Accel I2c Address
 #define ADXL345_POWER_CTL 0x2D
@@ -15,12 +15,12 @@
 #define PI 3.14159265358979
 
 byte buffer[14];   // Array to store ADC values 
-long gyro_x;
-long gyro_y;
-long gyro_z;
-long accel_x;
-long accel_y;
-long accel_z;
+float gyro_x;
+float gyro_y;
+float gyro_z;
+float accel_x;
+float accel_y;
+float accel_z;
 float RwAcc[3];  //normalized accel vector(x,y,z)
 float RwGyro[3]; //Gyro data (x,y,z)
 float temp;
@@ -31,6 +31,10 @@ unsigned long interval;
 
 int i;
 
+long sum_x = 0;
+long sum_y = 0;
+long sum_z = 0;
+
 #include <Wire.h>
 
 void setup()
@@ -40,7 +44,7 @@ void setup()
     Wire.begin();
     // Set Gyro settings
     // Sample Rate 1kHz, Filter Bandwidth 42Hz, Gyro Range 500 d/s 
-    writeTo(GYRO, 0x16, 0x0B);
+    writeTo(GYRO, 0x16, 0x1B);
     //set accel register data address
     writeTo(GYRO, 0x18, 0x32);
     // set accel i2c slave address
@@ -54,6 +58,13 @@ void setup()
     writeTo(ACCEL, 0x31, 0x04);
     //cancel pass through to accel, gyro will now read accel for us   
     writeTo(GYRO, 0x3D, 0x28);
+    
+    writeTo(GYRO, 0x0C, 0xFF);
+    writeTo(GYRO, 0x0D, 0xc0);
+    writeTo(GYRO, 0x0E, 0xFF);
+    writeTo(GYRO, 0x0F, 0x8b);
+    writeTo(GYRO, 0x10, 0x00);
+    writeTo(GYRO, 0x11, 0x0c);
     
     Serial.println("Start");
 }
@@ -92,40 +103,53 @@ void loop()
     oldTime = newTime;
 
     //Combine bytes into integers
-    //Temp is in MSB first
-    temp = buffer[0] << 16 | buffer[1];
+    temp = buffer[0] << 8 | buffer[1];
     // Gyro format is MSB first
-    gyro_x = buffer[2] << 16 | buffer[3];
-    gyro_y = buffer[4] << 16 | buffer[5];
-    gyro_z = buffer[6] << 16 | buffer[7];
+    gyro_x = buffer[2] << 8 | buffer[3];
+    gyro_y = buffer[4] << 8 | buffer[5];
+    gyro_z = buffer[6] << 8 | buffer[7];
     
     // Accel is LSB first. Also because of orientation of chips
     // accel y output is in same orientation as gyro x
     // and accel x is gyro -y
-    accel_x = buffer[8] << 16 | buffer[9];
-    accel_y = buffer[10] << 16 | buffer[11];
-    accel_z = buffer[12] << 16 | buffer[13];
+    accel_x = buffer[9] << 8 | buffer[8];
+    accel_y = buffer[11] << 8 | buffer[10];
+    accel_z = buffer[13] << 8 | buffer[12];
 
     //accel vector
     RwAcc[0] = accel_x;
     RwAcc[1] = accel_y;
     RwAcc[2] = accel_z;
-    //normalize3DVector(RwAcc);
+    normalize3DVector(RwAcc);
+    
+    temp = map(temp,-32768,2048,-40.00,85.00);
     
     // Print out what we have
+    sum_x += gyro_x;
+    sum_y += gyro_y;
+    sum_z += gyro_z;
+    
+    Serial.print(sum_x);  // echo the number received to screen
+    Serial.print(",");
+    Serial.print(sum_y);  // echo the number received to screen
+    Serial.print(",");
+    Serial.print(sum_z);  // echo the number received to screen 
+    Serial.print(",");
+    Serial.print(temp);
+    Serial.print(",");
     Serial.print(gyro_x);  // echo the number received to screen
     Serial.print(",");
     Serial.print(gyro_y);  // echo the number received to screen
     Serial.print(",");
     Serial.print(gyro_z);  // echo the number received to screen 
     Serial.print(",");
-    Serial.print(accel_x);  // echo the number received to screen
+    Serial.print(RwAcc[0]);  // echo the number received to screen
     Serial.print(",");
-    Serial.print(accel_y);  // echo the number received to screen
+    Serial.print(RwAcc[1]);  // echo the number received to screen
     Serial.print(",");
-    Serial.print(accel_z);  // echo the number received to screen
+    Serial.print(RwAcc[2]);  // echo the number received to screen
     Serial.println("");     // prints carriage return
-    delay(100);             // wait for a second   
+    delay(10);             // wait for a second   
 }
 
 void normalize3DVector(float* vector) {
