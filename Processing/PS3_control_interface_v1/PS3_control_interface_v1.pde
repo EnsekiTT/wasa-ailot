@@ -16,10 +16,9 @@ Release (0 close, 1 1_open, 2 2_open, 3 3_open)
 Program Number (0 keep, 1 hover, 2 loop, 3 eight_loop)
 Auto Pilot Activate (1 active, 0 nonactive)
 Throttle (0~120%)
-Ladder (0~120%)
+rudder (0~120%)
 Aileron (0~120%)
 Elevator (0~120%)
-check sum (sum(0~9))
 */
 class serial_out{
   int warning_stop;
@@ -28,30 +27,40 @@ class serial_out{
   int program;
   int autopilot;
   int throttle;
-  int ladder;
+  int temp_throttle;
+  int rudder;
   int aileron;
   int elevator;
-  int checksum;
 }
 serial_out ailot_out = new serial_out();
 
 //Every numbers neutral
-int throttle_def = 0;
-int ladder_def = 0;
-int aileron_def = 0;
-int elevator_def = 0;
+
+static int rudder_min = 1000;
+static int rudder_max = 2300;
+static int rudder_def = rudder_max - rudder_min;
+
+static int aileron_min = 1000;
+static int aileron_max = 2300;
+static int aileron_def = aileron_max - aileron_min;
+
+static int elevator_min = 1000;
+static int elevator_max = 2300;
+static int elevator_def = elevator_max - elevator_min;
+
+static int throttle_min = 1000;
+static int throttle_max = 2300;
+static int throttle_def = 1000;
 
 /*
 serial_in
-Acceleration X (0x00~0xFFFF)
-Acceleration Y (0x00~0xFFFF)
-Acceleration Z (0x00~0xFFFF)
-Angular Velocity X (0x00~0xFFFF)
-Angular Velocity Y (0x00~0xFFFF)
-Angular Velocity Z (0x00~0xFFFF)
-Altitude (0x00~0xFFFF)
-Battery (0x0~0xFF)
-checksum
+Acceleration X (0x0000~0xFFFF)
+Acceleration Y (0x0000~0xFFFF)
+Acceleration Z (0x0000~0xFFFF)
+Angular Velocity X (0x0000~0xFFFF)
+Angular Velocity Y (0x0000~0xFFFF)
+Angular Velocity Z (0x0000~0xFFFF)
+Altitude (0x0000~0xFFFF)
 */
 class serial_in{
   int accel_X;
@@ -61,17 +70,9 @@ class serial_in{
   int angVel_Y;
   int angVel_Z;
   int altitude;
-  int battery;
-  int checksum;
 }
 serial_in ailot_in = new serial_in();
 serial_in ailot_in_old = new serial_in();
-
-//Stick
-float LX;
-float LY;
-float RX;
-float RY;
 
 ControllButton SELECT;
 ControllButton START;
@@ -98,8 +99,14 @@ ControllSlider RsliderY;
 ControllStick LSTICK;
 ControllStick RSTICK;
 
+//Stick
+float LX;
+float LY;
+float RX;
+float RY;
+
 void ServoNeutral(){
-  ailot_out.ladder = ladder_def;
+  ailot_out.rudder = rudder_def;
   ailot_out.aileron = aileron_def;
   ailot_out.elevator = elevator_def;
 }
@@ -125,15 +132,19 @@ void DropGoods(){
   }
 }
 void EmergencyCode(){
-  ailot_out.warning_stop = 1;
+  if(ailot_out.warning_stop == 1){
+     ailot_out.warning_stop = 0; 
+  }else{
+    ailot_out.warning_stop = 1;
+  }
   ailot_out.keep = 0;
   ailot_out.release = 0;
   ailot_out.program = 0;
   ailot_out.autopilot = 0;
-  ailot_out.throttle = 0;
-  ailot_out.ladder = ladder_def;
+  ailot_out.throttle = throttle_def;
+  ailot_out.rudder = rudder_def;
   ailot_out.aileron = aileron_def;
-  ailot_out.elevator = 0xFF;
+  ailot_out.elevator = elevator_def;
 }
 void ResetDrop(){
   ailot_out.release = 0;
@@ -165,31 +176,31 @@ void BackCode(){
 }
 
 void UpThrottle(){
-  ailot_out.throttle += 10;
-  if(ailot_out.throttle > 100){
-    ailot_out.throttle += 5; 
+  ailot_out.temp_throttle += 120;
+  if(ailot_out.temp_throttle > 1000){
+    ailot_out.temp_throttle += 60; 
   }
-  if(ailot_out.throttle > 120){
-    ailot_out.throttle = 120; 
+  if(ailot_out.temp_throttle > 1180){
+    ailot_out.temp_throttle = 1180; 
   }
 }
 void SeventyFiveThrottle(){
-  ailot_out.throttle = 75;
+  ailot_out.temp_throttle = 950;
 }
 void ThrottleCut(){
-  ailot_out.throttle = 0;
+  ailot_out.temp_throttle = 0;
 }
 void DownThrottle(){
-  ailot_out.throttle -= 10;
-  if(ailot_out.throttle < 0){
-    ailot_out.throttle = 0; 
+  ailot_out.temp_throttle -= 120;
+  if(ailot_out.temp_throttle+throttle_def < 1000){
+    ailot_out.temp_throttle = 0; 
   }
 }
 
 void setup(){
   
   //Serial Port Setup
-  ailotPort = new Serial(this,"/dev/tty.usbmodemfa131", 19200);
+  ailotPort = new Serial(this,"/dev/tty.usbmodemfd121", 19200);
   
   //Controler Setup
   ControllIO   controll = ControllIO.getInstance(this);                         // 入力へのポインタ
@@ -224,7 +235,7 @@ void setup(){
   START.plug("AutoPilotIO",ControllIO.ON_PRESS);
   L1.plug("KeepPoseIO",ControllIO.ON_RELEASE);
   R1.plug("DropGoods",ControllIO.ON_RELEASE);
-  L2.plug("EmergencyCode",ControllIO.ON_PRESS);
+  L2.plug("EmergencyCode",ControllIO.ON_RELEASE);
   R2.plug("ResetDrop",ControllIO.ON_PRESS);
   L3.plug("BackMenu",ControllIO.ON_RELEASE);
   R3.plug("NextMenu",ControllIO.ON_RELEASE);
@@ -252,7 +263,7 @@ Release (0 close, 1 1_open, 2 2_open, 3 3_open)
 Program Number (0 keep, 1 hover, 2 loop, 3 eight_loop, 4 through)
 Auto Pilot Activate (1 active, 0 nonactive)
 Throttle (0~120%)
-Ladder (0~120%)
+rudder (0~120%)
 Aileron (0~120%)
 Elevator (0~120%)
 check sum (sum(0~9))
@@ -264,12 +275,12 @@ class serial_out{
   int program;
   int autopilot;
   int throttle;
-  int ladder;
+  int rudder;
   int aileron;
   int elevator;
   int checksum;
 }
-  ailot_out.ladder = ladder_def;
+  ailot_out.rudder = rudder_def;
   ailot_out.aileron = aileron_def;
   ailot_out.elevator = elevator_def;
 */
@@ -278,61 +289,57 @@ void draw(){
   LY = LSTICK.getY();
   RX = RSTICK.getX();
   RY = RSTICK.getY();
-  ailot_out.ladder = (int)(LX+1)*1023+ladder_def;
-  ailot_out.elevator = (int)(LY+1)*1023+elevator_def;
-  ailot_out.aileron = (int)(RX+1)*1023+aileron_def;
-  ailot_out.throttle += (int)RY*30;
+  ailot_out.rudder = (int)(RX*800)+rudder_def;
+  ailot_out.elevator = (int)(LY*800)+elevator_def;
+  ailot_out.aileron = (int)(LX*800)+aileron_def;
+  ailot_out.throttle = (int)(-RY*120)+ailot_out.temp_throttle+throttle_def;
   if(ailot_out.throttle < 0){
     ailot_out.throttle = 0; 
   }
-  background(0);
+  serialOutput();
 }
 
+char temp;
 void serialEvent(Serial p){
-  if(ailotPort.available()>8){
-    ailot_in.accel_X = ailotPort.read();
-    ailot_in.checksum &= ailot_in.accel_X;
-    ailot_in.accel_Y = ailotPort.read();
-    ailot_in.checksum &= ailot_in.accel_Y;
-    ailot_in.accel_Z = ailotPort.read();
-    ailot_in.checksum &= ailot_in.accel_Z;
-  
-    ailot_in.angVel_X = ailotPort.read();
-    ailot_in.checksum &= ailot_in.angVel_X;
-    ailot_in.angVel_Y = ailotPort.read();
-    ailot_in.checksum &= ailot_in.angVel_Y;
-    ailot_in.angVel_Z = ailotPort.read();
-    ailot_in.checksum &= ailot_in.angVel_Z;
-  
-    ailot_in.altitude = ailotPort.read();
-    ailot_in.checksum &= ailot_in.altitude;
-    ailot_in.battery= ailotPort.read();
-    ailot_in.checksum &= ailot_in.battery;
-    ailot_in.checksum -= ailotPort.read();
-    if(ailot_in.checksum != 0){
-      ailot_in = ailot_in_old;
-    }else{
-      ailot_in_old = ailot_in; 
-    }
-    ailot_out.checksum = 0;
-    ailotPort.write(ailot_out.warning_stop);
-    ailot_out.checksum &= ailot_out.warning_stop;
-    ailotPort.write(ailot_out.keep);
-    ailot_out.checksum &= ailot_out.keep;
-    ailotPort.write(ailot_out.release);
-    ailot_out.checksum &= ailot_out.release;
-    ailotPort.write(ailot_out.program);
-    ailot_out.checksum &= ailot_out.program;
-    ailotPort.write(ailot_out.autopilot);
-    ailot_out.checksum &= ailot_out.autopilot;
-    ailotPort.write(ailot_out.throttle);
-    ailot_out.checksum &= ailot_out.throttle;
-    ailotPort.write(ailot_out.ladder);
-    ailot_out.checksum &= ailot_out.ladder;
-    ailotPort.write(ailot_out.aileron);
-    ailot_out.checksum &= ailot_out.aileron;
-    ailotPort.write(ailot_out.elevator);
-    ailot_out.checksum &= ailot_out.elevator;
-    ailotPort.write(ailot_out.checksum); 
+  if(ailotPort.available()>0){
+    temp = (char)ailotPort.read();
+    print(temp); 
   }
+  
+  /*
+  if(ailotPort.available()>13){
+    ailot_in.accel_X = ailotPort.read() << 8;
+    ailot_in.accel_X &= ailotPort.read();
+    ailot_in.accel_Y = ailotPort.read() << 8;
+    ailot_in.accel_Y &= ailotPort.read();
+    ailot_in.accel_Z = ailotPort.read() << 8;
+    ailot_in.accel_Z &= ailotPort.read();
+  
+    ailot_in.angVel_X = ailotPort.read() << 8;
+    ailot_in.angVel_X &= ailotPort.read();
+    ailot_in.angVel_Y = ailotPort.read() << 8;
+    ailot_in.angVel_Y &= ailotPort.read();
+    ailot_in.angVel_Z = ailotPort.read() << 8;
+    ailot_in.angVel_Z &= ailotPort.read();
+  
+    ailot_in.altitude = ailotPort.read() << 8;
+    ailot_in.altitude &= ailotPort.read();
+  }
+  */
+}
+
+void serialOutput(){
+  ailotPort.write(ailot_out.warning_stop);
+  ailotPort.write(ailot_out.keep);
+  ailotPort.write(ailot_out.release);
+  ailotPort.write(ailot_out.program);
+  ailotPort.write(ailot_out.autopilot);
+  ailotPort.write(ailot_out.throttle >> 8);
+  ailotPort.write(ailot_out.throttle & 0x00FF);
+  ailotPort.write(ailot_out.rudder >> 8);
+  ailotPort.write(ailot_out.rudder & 0x00FF);
+  ailotPort.write(ailot_out.aileron >> 8);
+  ailotPort.write(ailot_out.aileron & 0x00FF);
+  ailotPort.write(ailot_out.elevator >> 8); 
+  ailotPort.write(ailot_out.elevator & 0x00FF);
 }

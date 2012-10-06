@@ -14,62 +14,147 @@
 #define DROP_3 1700
 #define NODROP 1000
 
-#define LADDER_MIN 1000
-#define LADDER_MAX 2300
-#define AILERON_MIN 1000
-#define AILERON_MAX 2300
-#define ELEVATOR_MIN 1000
-#define ELEVATOR_MAX 2300
-#define THROTTLE_MIN 1000
-#define THROTTLE_MAX 2300
-
 Servo aileron;
-Servo ladder;
+Servo rudder;
 Servo elevator;
 Servo throttle;
 Servo drop;
 
-int ladder_deg = 1500;
+//各種変数
+int warning_stop = 1;
+int keep = 0;
+int release_box = 0;
+int program = 0;
+int autopilot = 0;
+
+//入力用
+int rudder_in = 1500;
+int aileron_in = 1500;
+int elevator_in = 1500;
+int throttle_in = 1023;
+
+//操作用
+int rudder_deg = 1500;
 int aileron_deg = 1500;
 int elevator_deg = 1500;
 int throttle_deg = 1023;
 int drop_deg = NODROP;
 
-/*
-int accel_x = 0;
-int accel_y = 0;
-int accel_z = 0;
-int angvel_x = 0;
-int angvel_y = 0;
-int angvel_z = 0;
-*/
-int altitude = 0;
-int battery = 0;
 
 /// IMU ///
 byte buffer[14];   // Array to store ADC values 
-float gyro_x;
-float gyro_y;
-float gyro_z;
-float accel_x;
-float accel_y;
-float accel_z;
+float gyro_x = 0;
+float gyro_y = 0;
+float gyro_z = 0;
+float accel_x = 0;
+float accel_y = 0;
+float accel_z = 0;
 
 unsigned long curtime;
 unsigned long oldTime = 0;
 unsigned long newTime;
 unsigned long interval;
 
+/// Other Sensors ///
+int altitude = 0;
+int battery = 0;
 ///////////
 
 void setup(){
-  Serial.begin(57600);
-  ladder.attach(0);
+  Serial.begin(19200);
+  rudder.attach(0);
   elevator.attach(1);
   throttle.attach(2);
   aileron.attach(3);
   drop.attach(4);
-  
+  //setup_imu();
+}
+
+void loop(){
+  serial_in();
+  control_servo();
+  rudder.writeMicroseconds(rudder_deg);
+  aileron.writeMicroseconds(aileron_deg);
+  elevator.writeMicroseconds(elevator_deg);
+  throttle.writeMicroseconds(throttle_deg);
+  drop.writeMicroseconds(drop_deg);
+  //get_imu();
+  serial_out();
+}
+
+//操舵系
+void setrudder(int deg){
+  rudder_deg = deg;
+}
+void setelevator(int deg){
+  elevator_deg = deg;
+}
+void setthrottle(int deg){
+  throttle_deg = deg;
+}
+void setaileron(int deg){
+  aileron_deg = deg;
+}
+
+void control_servo(){
+  if(autopilot == 0){
+    setrudder(rudder_in);
+    setelevator(elevator_in);
+    setthrottle(throttle_in);
+    setaileron(aileron_in);
+    setdrop(release_box);
+  }else if(keep == 1){
+    
+  }else{
+    switch(program){
+      //keep
+      case 0:
+      
+      break;
+      //hover
+      case 1:
+    
+      break;
+      //loop
+      case 2: 
+      
+      break;
+      //eight_loop
+      case 3:
+      
+      break;
+      default:
+      
+      break;
+    }
+  } 
+}
+
+//投下装置
+void setdrop(int box){
+  switch(box){
+    case 0:
+      drop_deg = NODROP;
+    break;
+    case 1:
+      drop_deg = DROP_1;    
+    break;
+    case 2:
+      drop_deg = DROP_2;
+    break;
+    case 3:
+      drop_deg = DROP_3;    
+    break;
+    default:
+      drop_deg = NODROP;
+    break;
+  }
+}
+
+
+//センサ系
+void setup_imu(){
+  //IMU Sensor Setup
   Wire.begin();
   // Set Gyro settings
   // Sample Rate 1kHz, Filter Bandwidth 42Hz, Gyro Range 500 d/s 
@@ -96,36 +181,7 @@ void setup(){
   writeTo(GYRO, 0x11, 0x0c);
 }
 
-void loop(){
-  serialinout();
-  ladder.writeMicroseconds(ladder_deg);
-  aileron.writeMicroseconds(aileron_deg);
-  elevator.writeMicroseconds(elevator_deg);
-  throttle.writeMicroseconds(throttle_deg);
-  drop.writeMicroseconds(drop_deg);
-  getimu();
-}
-
-//操舵系
-void setladder(int deg){
-  int ms = map(deg, 0, 1023, 1000, 2300);
-  ladder_deg = ms;
-}
-void setelevator(int deg){
-  int ms = map(deg, 0, 1023, 1000, 2300);
-  elevator_deg = ms;
-}
-void setthrottle(int deg){
-  int ms = map(deg, 0, 1023, 1000, 2300);
-  throttle_deg = ms;
-}
-void setaileron(int deg){
-  int ms = map(deg, 0, 1023, 1000, 2300);
-  aileron_deg = ms;
-}
-
-//センサ系
-void getimu(){
+void get_imu(){
   // Read the Gyro X, Y and Z and Accel X, Y and Z all through the gyro  
   // First set the register start address for X on Gyro  
   Wire.beginTransmission(GYRO);
@@ -158,10 +214,10 @@ void getimu(){
   accel_z = buffer[13] << 8 | buffer[12];
 }
 
-void getaltitude(){
+void get_altitude(){
   
 }
-void getbattery(){
+void get_battery(){
   
 }
 
@@ -173,31 +229,25 @@ void writeTo(int device, byte address, byte val) {
   Wire.endTransmission();         // end transmission
 }
 
-void serialinout(){
-  if(Serial.available() > 8){
-      
+void serial_in(){
+  if(Serial.available() > 12){
+    warning_stop = Serial.read(); //warning_stop
+    keep = Serial.read(); //keep
+    release_box = Serial.read(); //release
+    program = Serial.read(); //program
+    autopilot = Serial.read(); //autopilot
+    throttle_in = Serial.read() << 8; //throttle_low
+    throttle_in += Serial.read(); //throttle_high
+    rudder_in = Serial.read() << 8; //rudder_low
+    rudder_in += Serial.read(); //rudder_high
+    aileron_in = Serial.read() << 8; //aileron_low
+    aileron_in += Serial.read(); //aileron_high
+    elevator_in = Serial.read() << 8; //elevator_low
+    elevator_in += Serial.read(); //elevator_high
   }
-  
 }
 
-//投下装置
-void setdrop(int box){
-  switch(box){
-    case 0:
-      drop_deg = NODROP;
-    break;
-    case 1:
-      drop_deg = DROP_1;    
-    break;
-    case 2:
-      drop_deg = DROP_2;
-    break;
-    case 3:
-      drop_deg = DROP_3;    
-    break;
-    default:
-      drop_deg = NODROP;
-    break;
-  }
+void serial_out(){
+  
 }
 
