@@ -37,20 +37,20 @@ serial_out ailot_out = new serial_out();
 //Every numbers neutral
 
 static int rudder_min = 1000;
-static int rudder_max = 2300;
+static int rudder_max = 2500;
 static int rudder_def = rudder_max - rudder_min;
 
 static int aileron_min = 1000;
-static int aileron_max = 2300;
+static int aileron_max = 2500;
 static int aileron_def = aileron_max - aileron_min;
 
 static int elevator_min = 1000;
-static int elevator_max = 2300;
+static int elevator_max = 2500;
 static int elevator_def = elevator_max - elevator_min;
 
-static int throttle_min = 1000;
+static int throttle_min = 1023;
 static int throttle_max = 2300;
-static int throttle_def = 1000;
+static int throttle_def = 1023;
 
 /*
 serial_in
@@ -70,6 +70,8 @@ class serial_in{
   int angVel_Y;
   int angVel_Z;
   int altitude;
+  int battery;
+  int interval;
 }
 serial_in ailot_in = new serial_in();
 serial_in ailot_in_old = new serial_in();
@@ -185,7 +187,7 @@ void UpThrottle(){
   }
 }
 void SeventyFiveThrottle(){
-  ailot_out.temp_throttle = 950;
+  ailot_out.temp_throttle = 650;
 }
 void ThrottleCut(){
   ailot_out.temp_throttle = 0;
@@ -200,8 +202,11 @@ void DownThrottle(){
 void setup(){
   
   //Serial Port Setup
-  ailotPort = new Serial(this,"/dev/tty.usbmodemfd121", 19200);
-  
+  println(Serial.list());
+  ailotPort = new Serial(this, Serial.list()[0], 19200);
+  //ailotPort = new Serial(this,"/dev/tty.usbmodemfd121", 57600);
+  //ailotPort = new Serial(this,"/dev/tty.usbmodemfa131", 19200);
+  //ailotPort = new Serial(this,"/dev/tty.usbserial-A501DG6P", 9600);
   //Controler Setup
   ControllIO   controll = ControllIO.getInstance(this);                         // 入力へのポインタ
   ControllDevice device = controll.getDevice("PLAYSTATION(R)3 Controller");     // 個々の入力装置を指定
@@ -289,25 +294,26 @@ void draw(){
   LY = LSTICK.getY();
   RX = RSTICK.getX();
   RY = RSTICK.getY();
-  ailot_out.rudder = (int)(RX*800)+rudder_def;
-  ailot_out.elevator = (int)(LY*800)+elevator_def;
-  ailot_out.aileron = (int)(LX*800)+aileron_def;
-  ailot_out.throttle = (int)(-RY*120)+ailot_out.temp_throttle+throttle_def;
+  ailot_out.rudder = (int)(RX*rudder_def/2)+rudder_def;
+  ailot_out.elevator = (int)(LY*elevator_def/2)+elevator_def;
+  ailot_out.aileron = (int)(LX*aileron_def/2)+aileron_def;
+  ailot_out.throttle = (int)(-RY*300)+ailot_out.temp_throttle+throttle_def;
   if(ailot_out.throttle < 0){
     ailot_out.throttle = 0; 
   }
   serialOutput();
 }
 
-char temp;
+String temp;
 void serialEvent(Serial p){
-  if(ailotPort.available()>0){
-    temp = (char)ailotPort.read();
-    print(temp); 
+  if(p.available() > 0){
+    temp = p.readString();
   }
-  
+  print(temp);
   /*
-  if(ailotPort.available()>13){
+  if(ailotPort.available()>14){
+    ailot_in.interval = ailotPort.read() << 8;
+    ailot_in.interval &= ailotPort.read();
     ailot_in.accel_X = ailotPort.read() << 8;
     ailot_in.accel_X &= ailotPort.read();
     ailot_in.accel_Y = ailotPort.read() << 8;
@@ -329,6 +335,7 @@ void serialEvent(Serial p){
 }
 
 void serialOutput(){
+  ailotPort.write('i');
   ailotPort.write(ailot_out.warning_stop);
   ailotPort.write(ailot_out.keep);
   ailotPort.write(ailot_out.release);

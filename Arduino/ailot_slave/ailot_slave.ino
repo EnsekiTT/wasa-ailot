@@ -1,4 +1,5 @@
 #include <Servo.h>
+#include <MsTimer2.h>
 #include <Wire.h>
 
 #define GYRO 0x68         // gyro I2C address
@@ -6,6 +7,8 @@
 #define REG_TEMP 0x1B     // IMU-3000 Register address for 
 #define ACCEL 0x53        // Accel I2c Address
 #define ADXL345_POWER_CTL 0x2D
+
+#define TIMER_INTERVAL 20
 
 #define PI 3.14159265358979
 
@@ -43,12 +46,18 @@ int drop_deg = NODROP;
 
 /// IMU ///
 byte buffer[14];   // Array to store ADC values 
-float gyro_x = 0;
-float gyro_y = 0;
-float gyro_z = 0;
-float accel_x = 0;
-float accel_y = 0;
-float accel_z = 0;
+float gyro_x_low = 0;
+float gyro_y_low = 0;
+float gyro_z_low = 0;
+float accel_x_low = 0;
+float accel_y_low = 0;
+float accel_z_low = 0;
+float gyro_x_high = 0;
+float gyro_y_high = 0;
+float gyro_z_high = 0;
+float accel_x_high = 0;
+float accel_y_high = 0;
+float accel_z_high = 0;
 
 unsigned long curtime;
 unsigned long oldTime = 0;
@@ -62,12 +71,19 @@ int battery = 0;
 
 void setup(){
   Serial.begin(19200);
-  rudder.attach(0);
-  elevator.attach(1);
-  throttle.attach(2);
-  aileron.attach(3);
-  drop.attach(4);
+  rudder.attach(2);
+  elevator.attach(3);
+  throttle.attach(4);
+  aileron.attach(5);
+  drop.attach(6);
   //setup_imu();
+  while(1){
+     if(Serial.available() > 0){
+       break; 
+     }
+  }
+  MsTimer2::set(TIMER_INTERVAL, interupt);
+  MsTimer2::start();
 }
 
 void loop(){
@@ -79,6 +95,9 @@ void loop(){
   throttle.writeMicroseconds(throttle_deg);
   drop.writeMicroseconds(drop_deg);
   //get_imu();
+}
+
+void interupt(){
   serial_out();
 }
 
@@ -202,16 +221,22 @@ void get_imu(){
   oldTime = newTime;
 
   // Gyro format is MSB first
-  gyro_x = buffer[2] << 8 | buffer[3];
-  gyro_y = buffer[4] << 8 | buffer[5];
-  gyro_z = buffer[6] << 8 | buffer[7];
+  gyro_x_high = buffer[2];
+  gyro_x_low = buffer[3];
+  gyro_y_high = buffer[4];
+  gyro_y_low = buffer[5];
+  gyro_z_high = buffer[6];
+  gyro_z_low = buffer[7];
     
   // Accel is LSB first. Also because of orientation of chips
   // accel y output is in same orientation as gyro x
   // and accel x is gyro -y
-  accel_x = buffer[9] << 8 | buffer[8];
-  accel_y = buffer[11] << 8 | buffer[10];
-  accel_z = buffer[13] << 8 | buffer[12];
+  accel_x_high = buffer[9];
+  accel_x_low = buffer[8];
+  accel_y_high = buffer[11];
+  accel_y_low = buffer[10];
+  accel_z_high = buffer[13];
+  accel_z_low = buffer[12];
 }
 
 void get_altitude(){
@@ -231,23 +256,47 @@ void writeTo(int device, byte address, byte val) {
 
 void serial_in(){
   if(Serial.available() > 12){
-    warning_stop = Serial.read(); //warning_stop
-    keep = Serial.read(); //keep
-    release_box = Serial.read(); //release
-    program = Serial.read(); //program
-    autopilot = Serial.read(); //autopilot
-    throttle_in = Serial.read() << 8; //throttle_low
-    throttle_in += Serial.read(); //throttle_high
-    rudder_in = Serial.read() << 8; //rudder_low
-    rudder_in += Serial.read(); //rudder_high
-    aileron_in = Serial.read() << 8; //aileron_low
-    aileron_in += Serial.read(); //aileron_high
-    elevator_in = Serial.read() << 8; //elevator_low
-    elevator_in += Serial.read(); //elevator_high
+    if(Serial.read() == 'i'){
+      warning_stop = Serial.read(); //warning_stop
+      keep = Serial.read(); //keep
+      release_box = Serial.read(); //release
+      program = Serial.read(); //program
+      autopilot = Serial.read(); //autopilot
+      throttle_in = Serial.read() << 8; //throttle_low
+      throttle_in += Serial.read(); //throttle_high
+      rudder_in = Serial.read() << 8; //rudder_low
+      rudder_in += Serial.read(); //rudder_high
+      aileron_in = Serial.read() << 8; //aileron_low
+      aileron_in += Serial.read(); //aileron_high
+      elevator_in = Serial.read() << 8; //elevator_low
+      elevator_in += Serial.read(); //elevator_high
+    }
   }
 }
 
 void serial_out(){
-  
+  // Debug
+  Serial.print(throttle_in);
+  Serial.print(rudder_in);
+  Serial.print(aileron_in);
+  Serial.print(elevator_in);
+  Serial.println();
+  delay(5);
+  /*
+  Serial.write(interval>>8);
+  Serial.write(interval & 0x00FF);
+  Serial.write(accel_x_high);
+  Serial.write(accel_x_low);
+  Serial.write(accel_y_high);
+  Serial.write(accel_y_low);
+  Serial.write(accel_z_high);
+  Serial.write(accel_z_low);
+  Serial.write(gyro_x_high);
+  Serial.write(gyro_x_low);
+  Serial.write(gyro_y_high);
+  Serial.write(gyro_y_low);
+  Serial.write(gyro_z_high);
+  Serial.write(gyro_z_low);
+  */
 }
 
