@@ -485,6 +485,8 @@ double pid_rudder(double setangle, double Kp, double Ki, double Kd){
 }
 
 void serialEvent(Serial p){
+  print((char)ailotPort.read());
+  /*
   int safety = 0;
   char check;
   int temp = 0;
@@ -518,6 +520,7 @@ void serialEvent(Serial p){
       getAngle();
     }
   }
+  */
   setControl();
   showdata();
 }
@@ -528,10 +531,7 @@ void serialOutput(){
   output = true;
   ailotPort.write('a');
   ailotPort.write(ailot_out.warning_stop);
-  ailotPort.write(ailot_out.keep);
   ailotPort.write(ailot_out.release);
-  ailotPort.write(ailot_out.program);
-  ailotPort.write(ailot_out.autopilot);
   ailotPort.write(ailot_out.throttle);
   ailotPort.write(ailot_out.rudder);
   ailotPort.write(ailot_out.aileron);

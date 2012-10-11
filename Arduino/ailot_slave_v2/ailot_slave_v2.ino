@@ -213,45 +213,22 @@ void setdrop(int box){
 
 void set_serial_data(){
   warning_stop = inbuf[0];
-  keep = inbuf[1];
-  release_box = inbuf[2];
-  program = inbuf[3];
-  autopilot = inbuf[4];
-  throttle_in = inbuf[5];
-  rudder_in = inbuf[6];
-  aileron_in = inbuf[7];
-  elevator_in = inbuf[8];
+  release_box = inbuf[1];
+  throttle_in = inbuf[2];
+  rudder_in = inbuf[3];
+  aileron_in = inbuf[4];
+  elevator_in = inbuf[5];
 }
 
 void control_servo(){
+  if(warning_stop == 1){
+    setthrottle(0); 
+  }
   setrudder(rudder_in);
   setelevator(elevator_in);
   setthrottle(throttle_in);
   setaileron(aileron_in);
   setdrop(release_box);
-/*
-    switch(program){
-      //keep
-      case 0:
-      
-      break;
-      //hover
-      case 1:
-    
-      break;
-      //loop
-      case 2: 
-      
-      break;
-      //eight_loop
-      case 3:
-      
-      break;
-      default:
-        autopilot == 0;
-      break;
-    }
-  */ 
 }
 
 //Sensors
@@ -309,19 +286,6 @@ void get_imu(){
   for(int i = 2; i < 14; i++){
     outbuf[i+1] = buffer[i];
   }
-  /*
-  // Gyro format is MSB first
-  gyro_x = buffer[2] << 8 | buffer[3];
-  gyro_y = buffer[4] << 8 | buffer[5];
-  gyro_z = buffer[6] << 8 | buffer[7];
-    
-  // Accel is LSB first. Also because of orientation of chips
-  // accel y output is in same orientation as gyro x
-  // and accel x is gyro -y
-  accel_x = buffer[9] << 8 | buffer[8];
-  accel_y = buffer[11] << 8 | buffer[10];
-  accel_z = buffer[13] << 8 | buffer[12];
-  */
 }
 
 void get_altitude(){
@@ -356,7 +320,7 @@ void serial_in(){
   int safety = 0;
   byte temp = 0;
   byte backup = 0;
-  if(Serial.available()>8){
+  if(Serial.available()>7){
     while(true){
        if(Serial.read() == 'a') break;
        safety++;
@@ -365,7 +329,7 @@ void serial_in(){
        }
     }
     if(safety <= 15){
-      for(int i = 0; i < 9; i++){
+      for(int i = 0; i < 6; i++){
         temp = Serial.read();
         backup = inbuf[i];
         if(temp != -1){
