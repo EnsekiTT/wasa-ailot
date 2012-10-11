@@ -1,21 +1,24 @@
 #include <Servo.h>
 #include <Wire.h>
 
+//Baud rate 9600 or 19200
 #define BAUDRATE 19200
-
+// IMU settings
 #define GYRO 0x68         // gyro I2C address
 #define GYRO_XOUT_H 0x1D   // IMU-3000 Register address for GYRO_XOUT_H
 #define REG_TEMP 0x1B     // IMU-3000 Register address for 
 #define ACCEL 0x53        // Accel I2c Address
 #define ADXL345_POWER_CTL 0x2D
 
+// 
 #define PI 3.14159265358979
-
+// Drop Servo Values
 #define DROP_1 120
 #define DROP_2 60
 #define DROP_3 0
 #define NODROP 180
 
+// Output pin assigne
 const int rudderPin = 2;
 const int elevatorPin = 3;
 const int throttlePin = 4;
@@ -23,57 +26,118 @@ const int aileronPin = 5;
 const int dropPin = 6;
 const int pingPin = 7;
 
+// Servo Class Setting
 Servo aileron;
 Servo rudder;
 Servo elevator;
 Servo throttle;
 Servo drop;
 
-//各種変数
+// State variables
 int warning_stop = 0;
 int keep = 0;
 int release_box = 0;
 int program = 0;
 int autopilot = 0;
 
-//入力用
+// Input controlled variables
+byte inbuf[9] = {0,0,0,0,0,0,0,0,0};
 int rudder_in = 90;
 int aileron_in = 90;
 int elevator_in = 90;
 int throttle_in = 0;
 
-//自動操作用
+// Input old controlled variables
+int rudder_in_old = 90;
+int aileron_in_old = 90;
+int elevator_in_old = 90;
+int throttle_in_old = 0;
+
+// Default controlled variables
 int rudder_deg = 90;
 int aileron_deg = 90;
 int elevator_deg = 90;
 int throttle_deg = 0;
 int drop_deg = NODROP;
 
-/// IMU ///
-byte buffer[14];   // Array to store ADC values 
-float gyro_x_low = 0;
-float gyro_y_low = 0;
-float gyro_z_low = 0;
-float accel_x_low = 0;
-float accel_y_low = 0;
-float accel_z_low = 0;
-float gyro_x_high = 0;
-float gyro_y_high = 0;
-float gyro_z_high = 0;
-float accel_x_high = 0;
-float accel_y_high = 0;
-float accel_z_high = 0;
+// Sensor Output values
+byte outbuf[17];
 
+// IMU values
+byte buffer[14];   // Array to store ADC values 
+int gyro_x = 0;
+int gyro_y = 0;
+int gyro_z = 0;
+
+int gyro_x_past = 0;
+int gyro_y_past = 0;
+int gyro_z_past = 0;
+
+int gyro_x_bias = 5;
+int gyro_y_bias = 32;
+int gyro_z_bias = 1;
+
+int accel_x = 0;
+int accel_y = 0;
+int accel_z = 0;
+
+int accel_x_past = 0;
+int accel_y_past = 0;
+int accel_z_past = 0;
+
+int accel_x_bias = 0;
+int accel_y_bias = 0;
+int accel_z_bias = 0;
+
+//
 unsigned long curtime;
 unsigned long oldTime = 0;
 unsigned long newTime;
 unsigned long interval;
 
+// PID settings
+int permit;
+
+int kp_accel_x;
+int ki_accel_x;
+int kd_accel_x;
+int setpoint_accel_x;
+
+int kp_accel_y;
+int ki_accel_y;
+int kd_accel_y;
+int setpoint_accel_y;
+
+int kp_accel_z;
+int ki_accel_z;
+int kd_accel_z;
+int setpoint_accel_z;
+
+int kp_gyro_x;
+int ki_gyro_x;
+int kd_gyro_x;
+int setpoint_gyro_x;
+
+int kp_gyro_y;
+int ki_gyro_y;
+int kd_gyro_y;
+int setpoint_gyro_y;
+
+int kp_gyro_z;
+int ki_gyro_z;
+int kd_gyro_z;
+int setpoint_gyro_z;
+
 /// Other Sensors ///
 int altitude = 0;
 int battery = 0;
-/////////////////////
 
+
+
+/**********************************/
+/***
+Setup
+***/
 void setup(){
   Serial.begin(BAUDRATE);
   Serial.flush();
@@ -86,6 +150,7 @@ void setup(){
   }
   Serial.flush();
   setup_imu();
+  outbuf[0] = (byte)'b';
   rudder.attach(rudderPin,1030,2100);
   elevator.attach(elevatorPin,1030,2100);
   throttle.attach(throttlePin,1030,2100);
@@ -93,19 +158,23 @@ void setup(){
   drop.attach(dropPin,1030,2100);
 }
 
+/***
+main loop
+***/
 void loop(){
   get_imu();
   get_altitude();
-  serial_in();
-  control_servo();
   serial_out();
+  serial_in();
+  set_serial_data();
+  control_servo();
   delay(20);
 }
 
-void interupt(){
-}
 
-//操舵系
+/***
+servo controls
+***/
 void setrudder(int deg){
   rudder.write(deg);
 }
@@ -119,7 +188,9 @@ void setaileron(int deg){
   aileron.write(deg);
 }
 
-//投下装置
+/***
+Drop Servo controls
+***/
 void setdrop(int box){
   switch(box){
     case 0:
@@ -140,17 +211,25 @@ void setdrop(int box){
   }
 }
 
+void set_serial_data(){
+  warning_stop = inbuf[0];
+  keep = inbuf[1];
+  release_box = inbuf[2];
+  program = inbuf[3];
+  autopilot = inbuf[4];
+  throttle_in = inbuf[5];
+  rudder_in = inbuf[6];
+  aileron_in = inbuf[7];
+  elevator_in = inbuf[8];
+}
 
 void control_servo(){
-  if(autopilot == 0){
-    setrudder(rudder_in);
-    setelevator(elevator_in);
-    setthrottle(throttle_in);
-    setaileron(aileron_in);
-    setdrop(release_box);
-  }else if(keep == 1){
-    
-  }else{
+  setrudder(rudder_in);
+  setelevator(elevator_in);
+  setthrottle(throttle_in);
+  setaileron(aileron_in);
+  setdrop(release_box);
+/*
     switch(program){
       //keep
       case 0:
@@ -169,19 +248,19 @@ void control_servo(){
       
       break;
       default:
-      
+        autopilot == 0;
       break;
     }
-  } 
+  */ 
 }
 
-//センサ系
+//Sensors
 void setup_imu(){
   //IMU Sensor Setup
   Wire.begin();
   // Set Gyro settings
   // Sample Rate 1kHz, Filter Bandwidth 42Hz, Gyro Range 500 d/s 
-  writeTo(GYRO, 0x16, 0x1B);
+  writeTo(GYRO, 0x16, 0x0B);
   //set accel register data address
   writeTo(GYRO, 0x18, 0x32);
   // set accel i2c slave address
@@ -225,28 +304,28 @@ void get_imu(){
   interval = newTime - oldTime;
   oldTime = newTime;
 
+  outbuf[1] = interval >> 8;
+  outbuf[2] = interval & 0x00FF;
+  for(int i = 2; i < 14; i++){
+    outbuf[i+1] = buffer[i];
+  }
+  /*
   // Gyro format is MSB first
-  gyro_x_high = buffer[2];
-  gyro_x_low = buffer[3];
-  gyro_y_high = buffer[4];
-  gyro_y_low = buffer[5];
-  gyro_z_high = buffer[6];
-  gyro_z_low = buffer[7];
+  gyro_x = buffer[2] << 8 | buffer[3];
+  gyro_y = buffer[4] << 8 | buffer[5];
+  gyro_z = buffer[6] << 8 | buffer[7];
     
   // Accel is LSB first. Also because of orientation of chips
   // accel y output is in same orientation as gyro x
   // and accel x is gyro -y
-  accel_x_high = buffer[9];
-  accel_x_low = buffer[8];
-  accel_y_high = buffer[11];
-  accel_y_low = buffer[10];
-  accel_z_high = buffer[13];
-  accel_z_low = buffer[12];
+  accel_x = buffer[9] << 8 | buffer[8];
+  accel_y = buffer[11] << 8 | buffer[10];
+  accel_z = buffer[13] << 8 | buffer[12];
+  */
 }
 
 void get_altitude(){
   long duration;
-  
   pinMode(pingPin, OUTPUT);
   digitalWrite(pingPin, LOW);
   delayMicroseconds(2);
@@ -257,6 +336,8 @@ void get_altitude(){
   pinMode(pingPin, INPUT);
   duration = pulseIn(pingPin, HIGH,20000);
   altitude = duration / 29 / 2;
+  outbuf[15] = altitude >> 8;
+  outbuf[16] = altitude & 0x00FF;
 }
 
 void get_battery(){
@@ -272,60 +353,34 @@ void writeTo(int device, byte address, byte val) {
 }
 
 void serial_in(){
-  if(Serial.available()>0 && Serial.peek() == 'a'){
-    if(Serial.available()>9){
-      Serial.read();
-      warning_stop = Serial.read(); //warning_stop
-      keep = Serial.read(); //keep
-      release_box = Serial.read(); //release
-      program = Serial.read(); //program
-      autopilot = Serial.read(); //autopilot
-      throttle_in = Serial.read(); //throttle
-      rudder_in = Serial.read(); //rudder
-      aileron_in = Serial.read(); //aileron
-      elevator_in = Serial.read(); //elevator
+  int safety = 0;
+  byte temp = 0;
+  byte backup = 0;
+  if(Serial.available()>8){
+    while(true){
+       if(Serial.read() == 'a') break;
+       safety++;
+       if(safety > 15){
+         break; 
+       }
     }
-  }else{
-    Serial.read(); 
+    if(safety <= 15){
+      for(int i = 0; i < 9; i++){
+        temp = Serial.read();
+        backup = inbuf[i];
+        if(temp != -1){
+          inbuf[i] = temp;
+        }else{
+          inbuf[i] = backup; 
+        }
+      }
+    }
   }
 }
 
 void serial_out(){
-  /*
-  Serial.write('a');
-  delayMicroseconds(1);
-  Serial.write(interval>>8);
-  delayMicroseconds(1);
-  Serial.write(interval & 0x00FF);
-  delayMicroseconds(1);
-  Serial.write(accel_x_high);
-  delayMicroseconds(1);
-  Serial.write(accel_x_low);
-  delayMicroseconds(1);
-  Serial.write(accel_y_high);
-  delayMicroseconds(1);
-  Serial.write(accel_y_low);
-  delayMicroseconds(1);
-  Serial.write(accel_z_high);
-  delayMicroseconds(1);
-  Serial.write(accel_z_low);
-  delayMicroseconds(1);
-  Serial.write(gyro_x_high);
-  delayMicroseconds(1);
-  Serial.write(gyro_x_low);
-  delayMicroseconds(1);
-  Serial.write(gyro_y_high);
-  delayMicroseconds(1);
-  Serial.write(gyro_y_low);
-  delayMicroseconds(1);
-  Serial.write(gyro_z_high);
-  delayMicroseconds(1);
-  Serial.write(gyro_z_low);
-  delayMicroseconds(1);
-*/
-  Serial.print(altitude);
-  delayMicroseconds(1);
-  Serial.println();
-  delayMicroseconds(1);
+  for(int i = 0; i < 17; i++){
+    Serial.write(outbuf[i]);
+  }
 }
 

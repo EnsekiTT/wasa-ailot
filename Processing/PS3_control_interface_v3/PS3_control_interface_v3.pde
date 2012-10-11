@@ -5,6 +5,8 @@ import java.io.*;
 int WINDOW_X=640;
 int WINDOW_Y=480;
 int BAUDRATE=19200;
+long INT_MAX=32767;
+long ONES_MICRO=1000000;
 //Serial Port
 Serial ailotPort;
 
@@ -71,10 +73,42 @@ class serial_in{
   int angVel_Z;
   int altitude;
   int battery;
-  int interval;
+  long interval;
 }
 serial_in ailot_in = new serial_in();
 serial_in ailot_in_old = new serial_in();
+int[] inbuf = new int[18];
+int gyro_x_past = 0;
+int gyro_y_past = 0;
+int gyro_z_past = 0;
+int gyro_x_bias = 5;
+int gyro_y_bias = 32;
+int gyro_z_bias = 1;
+
+//pid values;
+double En_a=0;
+double En_1_a=0;
+double En_2_a=0;
+double MVn_1_a=0;
+double MVn_a=0;
+
+double En_e=0;
+double En_1_e=0;
+double En_2_e=0;
+double MVn_1_e=0;
+double MVn_e=0;
+
+double En_r=0;
+double En_1_r=0;
+double En_2_r=0;
+double MVn_1_r=0;
+double MVn_r=0;
+
+double angle_x = 0.0;
+double angle_y = 0.0;
+double angle_z = 0.0;
+
+boolean eightloop = true;
 
 ControllButton SELECT;
 ControllButton START;
@@ -116,9 +150,12 @@ void ServoNeutral(){
 }
 void AutoPilotIO(){
   if(ailot_out.autopilot == 0){
-    ailot_out.autopilot = 1; 
+    resetAngle();
+    ailot_out.autopilot = 1;
+    eightloop = true;
   }else{
     ailot_out.autopilot = 0;
+    eightloop = true;
   }
 }
 void KeepPoseIO(){
@@ -170,6 +207,7 @@ void NextCode(){
   if(ailot_out.program > 3){
     ailot_out.program = 0; 
   }
+  println(ailot_out.program);
 }
 
 void BackCode(){
@@ -177,6 +215,7 @@ void BackCode(){
   if(ailot_out.program < 0){
     ailot_out.program = 0; 
   }
+  println(ailot_out.program);
 }
 
 void UpThrottle(){
@@ -205,10 +244,12 @@ void StartMission(){
   start = false;
 }
 
+
 void setup(){
   //Serial Port Setup
   println(Serial.list());
   ailotPort = new Serial(this, Serial.list()[0], BAUDRATE);
+  ailotPort.buffer(20);
   ailotPort.clear();
   //ailotPort = new Serial(this,"/dev/tty.usbmodemfd121", 57600);
   //ailotPort = new Serial(this,"/dev/tty.usbmodemfa131", 19200);
@@ -264,7 +305,9 @@ void setup(){
   PS.plug("StartMission",ControllIO.ON_RELEASE);
   
   size(WINDOW_X, WINDOW_Y);
-  while(start){}
+  while(start){
+    ailotPort.read();
+  }
 }
 
 /*
@@ -298,6 +341,105 @@ class serial_out{
 */
 int counter = 0;
 void draw(){
+  if(ailot_out.autopilot == 1){
+    autopilot(); 
+  }else{
+    humanpilot(); 
+  }
+  serialOutput();
+}
+
+void showdata(){
+  //print((int)angle_x);
+  //println(); 
+}
+
+void setControl(){
+  ailot_in.interval = (byte)(inbuf[0]&0x00FF) << 8 | (byte)(inbuf[1]&0x00FF);
+  
+  ailot_in.angVel_X = (byte)inbuf[2] << 8 | inbuf[3];
+  ailot_in.angVel_Y = (byte)inbuf[4] << 8 | inbuf[5];
+  ailot_in.angVel_Z = (byte)inbuf[6] << 8 | inbuf[7];
+
+  ailot_in.accel_X = (byte)inbuf[9] << 8 | inbuf[8];
+  ailot_in.accel_Y = (byte)inbuf[11] << 8 | inbuf[10];
+  ailot_in.accel_Z = (byte)inbuf[13] << 8 | inbuf[12];  
+  
+  ailot_in.altitude = inbuf[14] << 8 | inbuf[15];
+  //ailot_in.battery = (byte)inbuf[16];
+}
+
+void resetAngle(){
+   angle_x = 0;
+   angle_y = 0;
+   angle_z = 0; 
+}
+
+void getAngle(){
+  angle_x += (double)((long)500*(long)ailot_in.interval)*((double)gyro_x_past + (double)ailot_in.angVel_X - gyro_x_bias*2) / (double)INT_MAX / (double)ONES_MICRO / 2.0;
+  angle_y += (double)((long)500*(long)ailot_in.interval)*((double)gyro_y_past + (double)ailot_in.angVel_Y - gyro_y_bias*2) / (double)INT_MAX / (double)ONES_MICRO / 2.0;
+  angle_z += (double)((long)500*(long)ailot_in.interval)*((double)gyro_z_past + (double)ailot_in.angVel_Z - gyro_z_bias*2) / (double)INT_MAX / (double)ONES_MICRO / 2.0;
+  gyro_x_past = ailot_in.angVel_X;
+  gyro_y_past = ailot_in.angVel_Y;
+  gyro_z_past = ailot_in.angVel_Z;
+}
+
+/*
+ailot_out.rudder
+ailot_out.elevator
+ailot_out.aileron
+*/
+int past_control_aileron;
+int past_control_elevator;
+int past_control_rudder;
+void autopilot(){
+   switch(ailot_out.program){
+      //keep
+      case 0:
+        past_control_aileron = ailot_out.aileron;
+        past_control_elevator = ailot_out.elevator;
+        past_control_rudder = ailot_out.rudder;
+        ailot_out.aileron = past_control_aileron;
+        ailot_out.elevator = past_control_elevator;
+        ailot_out.rudder = past_control_rudder;
+      break;
+      //hover
+      case 1:
+        ailot_out.aileron = (int)pid_aileron(0, 1.0, 0.01, 0.01)/10+aileron_def;
+        ailot_out.rudder = (int)pid_rudder(0, 0.7, 0.01, 0.01)/3+rudder_def;
+        ailot_out.elevator = (int)pid_elevator(0, 0.7, 0.01, 0.01)/10+elevator_def;
+      break;
+      //loop
+      case 2: 
+        ailot_out.aileron = (int)pid_aileron(0, 1.0, 0.01, 0.01)/10+aileron_def;
+        ailot_out.rudder = (int)pid_rudder(370, 0.5, 0.01, 0.01)/3+rudder_def;
+        ailot_out.elevator = (int)pid_elevator(0, 0.5, 0.01, 0.01)/10+elevator_def;
+      break;
+      //eight_loop
+      case 3:
+        if(eightloop){
+          ailot_out.aileron = (int)pid_aileron(0, 0.1, 0.01, 0.01)/10+aileron_def;
+          ailot_out.rudder = (int)pid_rudder(360, 0.5, 0.01, 0.01)/3+rudder_def;
+          ailot_out.elevator = (int)pid_elevator(0, 0.5, 0.01, 0.01)/10+elevator_def;
+          if((int)angle_z > 360){
+            eightloop = false;
+          }
+        }else{
+          ailot_out.aileron = (int)pid_aileron(0, 5, 1, 2);
+          ailot_out.rudder = (int)pid_rudder(0, 5, 1, 2);
+          ailot_out.elevator = (int)pid_elevator(0, 5, 1, 2);
+          if((int)angle_z < 0){
+            eightloop = true; 
+          }
+        }      
+      break;
+      default:
+        ailot_out.program = 0;
+      break;
+   }
+}
+
+void humanpilot(){
   LX = LSTICK.getX();
   LY = LSTICK.getY();
   RX = RSTICK.getX();
@@ -310,57 +452,74 @@ void draw(){
     ailot_out.throttle = 0; 
   }else if(ailot_out.throttle >= 180){
     ailot_out.throttle = 180; 
-  }
-  serialOutput();
-  delay(20);
+  } 
+}
+
+double pid_aileron(double setangle, double Kp, double Ki, double Kd){
+  MVn_1_a = MVn_a;
+  En_2_a = En_1_a;
+  En_1_a = En_a;
+  En_a = setangle - angle_x;
+  double dMVn = (Kp*(En_a-En_1_a) + Ki*En_a + Kd*((En_a-En_1_a)-(En_1_a-En_2_a)));
+  MVn_a = MVn_1_a+dMVn;
+  return MVn_a;
+}
+
+double pid_elevator(double setangle, double Kp, double Ki, double Kd){
+  MVn_1_e = MVn_e;
+  En_2_e = En_1_e;
+  En_1_e = En_e;
+  En_e = setangle - angle_y;
+  double dMVn = (Kp*(En_e-En_1_e) + Ki*En_e + Kd*((En_e-En_1_e)-(En_1_e-En_2_e)));
+  MVn_e = MVn_1_e+dMVn;
+  return MVn_e;
+}
+double pid_rudder(double setangle, double Kp, double Ki, double Kd){
+  MVn_1_r = MVn_r;
+  En_2_r = En_1_r;
+  En_1_r = En_r;
+  En_r = setangle - angle_z;
+  double dMVn = (Kp*(En_r-En_1_r) + Ki*En_r + Kd*((En_r-En_1_r)-(En_1_r-En_2_r)));
+  MVn_r = MVn_1_r+dMVn;
+  return MVn_r;
 }
 
 void serialEvent(Serial p){
-  if(ailotPort.available()>14){
-    ailot_in.interval = ailotPort.read() << 8;
-    ailot_in.interval &= ailotPort.read();
-    ailot_in.accel_X = ailotPort.read() << 8;
-    ailot_in.accel_X &= ailotPort.read();
-    ailot_in.accel_Y = ailotPort.read() << 8;
-    ailot_in.accel_Y &= ailotPort.read();
-    ailot_in.accel_Z = ailotPort.read() << 8;
-    ailot_in.accel_Z &= ailotPort.read();
-  
-    ailot_in.angVel_X = ailotPort.read() << 8;
-    ailot_in.angVel_X &= ailotPort.read();
-    ailot_in.angVel_Y = ailotPort.read() << 8;
-    ailot_in.angVel_Y &= ailotPort.read();
-    ailot_in.angVel_Z = ailotPort.read() << 8;
-    ailot_in.angVel_Z &= ailotPort.read();
-  
-    ailot_in.altitude = ailotPort.read() << 8;
-    ailot_in.altitude &= ailotPort.read();
+  int safety = 0;
+  char check;
+  int temp = 0;
+  int backup = 0;
+  if(ailotPort.available()>17 && output == false){
+    while(true){
+       check = (char)ailotPort.read();
+       if(check == 'b'){
+         break;
+       }
+       safety++;
+       if(safety > 20){
+         break; 
+       }
+    }
+    if(safety <= 20){
+      for(int i = 0; i < 16; i++){
+        temp = ailotPort.read();
+        backup = inbuf[i];
+        if(temp == -1){
+          temp = ailotPort.read();
+          if(temp == -1){
+            inbuf[i] = backup;
+          }else{
+            inbuf[i] = temp; 
+          }
+        }else{
+          inbuf[i] = temp; 
+        }
+      }
+      getAngle();
+    }
   }
-  /*
-  if(ailotPort.available()>9 && output == false){
-    print((int)ailotPort.read());
-    print(",");
-    print((int)ailotPort.read());
-    print(",");
-    print((int)ailotPort.read());
-    print(",");
-    print((int)ailotPort.read());
-    print(",");
-    print((int)ailotPort.read());
-    print(",");
-    println();
-    print((int)ailotPort.read());
-    print(",");
-    print((int)ailotPort.read());
-    print(",");
-    print((int)ailotPort.read());
-    print(",");
-    print((int)ailotPort.read());
-    print(",");
-    print((int)ailotPort.read());
-    print(",");
-    println();
-  }*/
+  setControl();
+  showdata();
 }
 
 
