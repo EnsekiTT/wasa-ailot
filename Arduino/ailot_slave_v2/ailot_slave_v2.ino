@@ -1,8 +1,8 @@
 #include <Servo.h>
 #include <Wire.h>
 
-//Baud rate 9600 or 19200
-#define BAUDRATE 19200
+//Baud rate 9600 or 19200 or 115200
+#define BAUDRATE 115200
 // IMU settings
 #define GYRO 0x68         // gyro I2C address
 #define GYRO_XOUT_H 0x1D   // IMU-3000 Register address for GYRO_XOUT_H
@@ -140,7 +140,8 @@ Setup
 ***/
 void setup(){
   Serial.begin(BAUDRATE);
-  Serial.flush();
+  UCSR0C = (0<<UMSEL00) | (3<<UCSZ00) | (0<<USBS0) | (1<<UPM01) | (0<<UPM00); 
+  delay(10);
   while(1){
      if(Serial.available() > 0){
        if(Serial.read() == 'a'){
@@ -149,8 +150,8 @@ void setup(){
      }
   }
   Serial.flush();
-  setup_imu();
   outbuf[0] = (byte)'b';
+  setup_imu();
   rudder.attach(rudderPin,1030,2100);
   elevator.attach(elevatorPin,1030,2100);
   throttle.attach(throttlePin,1030,2100);
@@ -165,10 +166,10 @@ void loop(){
   get_imu();
   get_altitude();
   serial_out();
+  delay(5);
   serial_in();
   set_serial_data();
   control_servo();
-  delay(20);
 }
 
 
@@ -212,17 +213,25 @@ void setdrop(int box){
 }
 
 void set_serial_data(){
+  release_box = inbuf[0];
+  rudder_in = inbuf[1];
+  elevator_in = inbuf[2];
+  warning_stop = inbuf[3];
+  throttle_in = inbuf[4];
+  aileron_in = inbuf[5];
+  /*
   warning_stop = inbuf[0];
   release_box = inbuf[1];
   throttle_in = inbuf[2];
   rudder_in = inbuf[3];
   aileron_in = inbuf[4];
   elevator_in = inbuf[5];
+  */
 }
 
 void control_servo(){
   if(warning_stop == 1){
-    setthrottle(0); 
+    throttle_in = 0; 
   }
   setrudder(rudder_in);
   setelevator(elevator_in);
@@ -298,7 +307,7 @@ void get_altitude(){
   digitalWrite(pingPin, LOW);
   
   pinMode(pingPin, INPUT);
-  duration = pulseIn(pingPin, HIGH,20000);
+  duration = pulseIn(pingPin, HIGH,15000);
   altitude = duration / 29 / 2;
   outbuf[15] = altitude >> 8;
   outbuf[16] = altitude & 0x00FF;
@@ -318,24 +327,30 @@ void writeTo(int device, byte address, byte val) {
 
 void serial_in(){
   int safety = 0;
-  byte temp = 0;
-  byte backup = 0;
+  int temp = 0;
+  int backup = 0;
   if(Serial.available()>7){
     while(true){
        if(Serial.read() == 'a') break;
        safety++;
-       if(safety > 15){
+       if(safety > 7){
          break; 
        }
     }
-    if(safety <= 15){
+    if(safety < 7){
       for(int i = 0; i < 6; i++){
         temp = Serial.read();
         backup = inbuf[i];
-        if(temp != -1){
-          inbuf[i] = temp;
+        if(temp < 0){
+          inbuf[i] = backup;
+          temp = Serial.read();
+          if(temp < 0){
+            inbuf[i] = backup;
+          }else{
+            inbuf[i] = temp; 
+          }
         }else{
-          inbuf[i] = backup; 
+          inbuf[i] = temp; 
         }
       }
     }
@@ -343,8 +358,31 @@ void serial_in(){
 }
 
 void serial_out(){
+  /*
+  release_box = inbuf[0];
+  rudder_in = inbuf[1];
+  elevator_in = inbuf[2];
+  warning_stop = inbuf[3];
+  throttle_in = inbuf[4];
+  aileron_in = inbuf[5];
+  *
+  Serial.print("a,");
+  Serial.print(release_box);
+  Serial.print("b,");
+  Serial.print(rudder_in);
+  Serial.print("c,");
+  Serial.print(elevator_in);
+  Serial.print("d,");
+  Serial.print(warning_stop);
+  Serial.print("e,");
+  Serial.print(throttle_in);
+  Serial.print("f,");
+  Serial.print(aileron_in);
+  Serial.println();
+  /*/
   for(int i = 0; i < 17; i++){
     Serial.write(outbuf[i]);
   }
+  //*/
 }
 
