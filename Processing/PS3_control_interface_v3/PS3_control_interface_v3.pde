@@ -73,7 +73,7 @@ int aileron_offset = 15;
 int elevator_min = 0;
 int elevator_max = 180;
 int elevator_def = (elevator_max - elevator_min)/2;
-int elevator_offset = 0;
+int elevator_offset = 15;
 
 int throttle_min = 0;
 int throttle_max = 180;
@@ -305,7 +305,7 @@ void setup(){
   //Serial Port Setup
   println(Serial.list());
   ailotPort = new Serial(this, Serial.list()[0], BAUDRATE, 'E', 8, 1.0);
-  ailotPort.buffer(30);
+  ailotPort.buffer(10);
   ailotPort.clear();
   delay(20);  //ailotPort = new Serial(this,"/dev/tty.usbmodemfd121", 57600);
   //ailotPort = new Serial(this,"/dev/tty.usbmodemfa131", 19200);
@@ -407,6 +407,7 @@ void draw(){
   }else{
     humanpilot(); 
   }
+  delay(10);
   serialOutput();
   background(background);
   showdata();
@@ -495,26 +496,26 @@ void autopilot(){
       case 1:
         ailot_out.aileron = (int)pid_aileron(0, 0.1, 0.01, 0.01)/15+aileron_def+aileron_offset;
         ailot_out.rudder = (int)pid_rudder(0, 0.15, 0.0, 0.01)/9+rudder_def+rudder_offset;
-        ailot_out.elevator = (int)pid_elevator(0, 0.1, 0.0, 0.01)/9+elevator_def+elevator_offset;
+        ailot_out.elevator = (int)pid_elevator(0, 0.05, 0.0, 0.01)/9+elevator_def+elevator_offset;
       break;
       //loop
       case 2: 
         ailot_out.aileron = (int)pid_aileron(0, 0.1, 0.01, 0.01)/15+aileron_def+aileron_offset;
-        ailot_out.rudder = (int)pid_rudder(7, 0.15, 0.0, 0.01)/9+rudder_def+rudder_offset;
-        ailot_out.elevator = (int)pid_elevator(0, 0.01, 0.0, 0.01)/9+elevator_def+elevator_offset;
+        ailot_out.rudder = (int)pid_rudder(10, 0.15, 0.0, 0.01)/9+rudder_def+rudder_offset;
+        ailot_out.elevator = (int)pid_elevator(0, 0.05, 0.0, 0.01)/9+elevator_def+elevator_offset;
       break;
       //eight_loop
       case 3:
         if(eightloop){
           ailot_out.aileron = (int)pid_aileron(0, 0.1, 0.01, 0.01)/10+aileron_def+aileron_offset;
-          ailot_out.rudder = (int)pid_rudder(7, 0.15, 0.0, 0.01)/10+rudder_def+rudder_offset;
-          ailot_out.elevator = (int)pid_elevator(0, 0.01, 0.0, 0.01)/10+elevator_def+elevator_offset;
+          ailot_out.rudder = (int)pid_rudder(10, 0.15, 0.0, 0.01)/10+rudder_def+rudder_offset;
+          ailot_out.elevator = (int)pid_elevator(0, 0.05, 0.0, 0.01)/10+elevator_def+elevator_offset;
           if((int)angle_z > 360){
             eightloop = false;
           }
         }else{
           ailot_out.aileron = (int)pid_aileron(0, 0.1, 0.01, 0.01)/10+aileron_def+aileron_offset;
-          ailot_out.rudder = (int)pid_rudder(-7, 0.15, 0.0, 0.01)/10+rudder_def+rudder_offset;
+          ailot_out.rudder = (int)pid_rudder(-10, 0.15, 0.0, 0.01)/10+rudder_def+rudder_offset;
           ailot_out.elevator = (int)pid_elevator(0, 0.01, 0.0, 0.01)/10+elevator_def+elevator_offset;
           if((int)angle_z < 0){
             eightloop = true; 
@@ -533,8 +534,8 @@ void humanpilot(){
   RX = RSTICK.getX();
   RY = RSTICK.getY();
   ailot_out.rudder = (int)(-RX*rudder_def)+rudder_def+rudder_offset;
-  ailot_out.elevator = (int)(LY*elevator_def)+elevator_def+elevator_offset;
-  ailot_out.aileron = (int)(LX*aileron_def)+aileron_def+aileron_offset;
+  ailot_out.elevator = (int)(LY*elevator_def/3)+elevator_def+elevator_offset;
+  ailot_out.aileron = (int)(LX*aileron_def/3)+aileron_def+aileron_offset;
   ailot_out.throttle = (int)(-RY*30)+ailot_out.temp_throttle+throttle_def;
   if(ailot_out.throttle < 1){
     ailot_out.throttle = 1; 
@@ -558,9 +559,11 @@ double pid_elevator(double setangle, double Kp, double Ki, double Kd){
   En_2_e = En_1_e;
   En_1_e = En_e;
   En_e = ailot_in.angVel_Y - setangle;
+  /*
   if(  250 - ailot_in.altitude < 0){
     En_e += 3; 
   }
+  */
   double dMVn = (Kp*(En_e-En_1_e) + Ki*En_e + Kd*((En_e-En_1_e)-(En_1_e-En_2_e)));
   MVn_e = MVn_1_e+dMVn;
   return MVn_e;
@@ -577,7 +580,7 @@ double pid_rudder(double setangle, double Kp, double Ki, double Kd){
 
 void serialEvent(Serial p){
   //print((char)ailotPort.read());
-  //println();
+  
   int safety = 0;
   char check;
   int temp = 0;
@@ -613,6 +616,7 @@ void serialEvent(Serial p){
     }
   }
   setControl();
+  
 }
 
 

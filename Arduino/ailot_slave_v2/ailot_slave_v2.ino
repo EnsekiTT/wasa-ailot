@@ -166,7 +166,7 @@ void loop(){
   get_imu();
   get_altitude();
   serial_out();
-  delay(5);
+  delay(15);
   serial_in();
   set_serial_data();
   control_servo();
@@ -213,20 +213,21 @@ void setdrop(int box){
 }
 
 void set_serial_data(){
+  /*
   release_box = inbuf[0];
   rudder_in = inbuf[1];
   elevator_in = inbuf[2];
   warning_stop = inbuf[3];
   throttle_in = inbuf[4];
   aileron_in = inbuf[5];
-  /*
+  /**/
   warning_stop = inbuf[0];
   release_box = inbuf[1];
   throttle_in = inbuf[2];
   rudder_in = inbuf[3];
   aileron_in = inbuf[4];
   elevator_in = inbuf[5];
-  */
+  
 }
 
 void control_servo(){
@@ -307,7 +308,7 @@ void get_altitude(){
   digitalWrite(pingPin, LOW);
   
   pinMode(pingPin, INPUT);
-  duration = pulseIn(pingPin, HIGH,15000);
+  duration = pulseIn(pingPin, HIGH,20000);
   altitude = duration / 29 / 2;
   outbuf[15] = altitude >> 8;
   outbuf[16] = altitude & 0x00FF;
@@ -329,28 +330,27 @@ void serial_in(){
   int safety = 0;
   int temp = 0;
   int backup = 0;
-  if(Serial.available()>7){
+  if(Serial.available()>10){
     while(true){
        if(Serial.read() == 'a') break;
        safety++;
-       if(safety > 7){
+       if(safety > 8){
          break; 
        }
     }
-    if(safety < 7){
+    if(safety <= 8){
       for(int i = 0; i < 6; i++){
         temp = Serial.read();
         backup = inbuf[i];
-        if(temp < 0){
-          inbuf[i] = backup;
+        if(temp != -1){
+          inbuf[i] = temp;
+        }else{ 
           temp = Serial.read();
-          if(temp < 0){
-            inbuf[i] = backup;
+          if(temp != -1){
+            inbuf[i] = temp;
           }else{
-            inbuf[i] = temp; 
+            inbuf[i] = backup;
           }
-        }else{
-          inbuf[i] = temp; 
         }
       }
     }
@@ -379,7 +379,8 @@ void serial_out(){
   Serial.print("f,");
   Serial.print(aileron_in);
   Serial.println();
-  /*/
+  */
+  //*/
   for(int i = 0; i < 17; i++){
     Serial.write(outbuf[i]);
   }
